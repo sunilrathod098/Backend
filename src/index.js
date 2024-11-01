@@ -7,18 +7,19 @@ dotenv.config({
 })
 
 
+//database connection
 connectDB()
 .then(() => {
     app.listen(process.env.PORT || 5000, () => {
-        console.log(`server running on http://localhost:${process.env.PORT}`)
+        console.log(`Server running on http://localhost:${process.env.PORT}`)
     })
+    app.on("error", (err) => {
+        console.log("Error: ", err);
+        throw err
+    })
+
 }).catch((err) => {
     console.log("Database connection is faild !! ", err);
 })
-
-
-
-
-
 
 
