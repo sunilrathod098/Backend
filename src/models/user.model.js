@@ -55,7 +55,7 @@ const userSchema = new Schema(
     }
 );
 
-
+//this are the middleware functions save before user run
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password"))
         return next()
