@@ -42,10 +42,10 @@ const userSchema = new Schema(
                 ref: "video",
             },
         ],
-        watchLater: {
-            type: Schema.Types.ObjectId,
-            ref: "video",
-        },
+        // watchLater: {
+        //     type: Schema.Types.ObjectId,
+        //     ref: "video",
+        // },
         refreshToken: {
             type: String,
         },
