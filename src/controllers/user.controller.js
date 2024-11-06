@@ -6,7 +6,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloud } from "../utils/fileUpload.js";
 
 
-//generate token
+//generate token function-backend
 const generateAccessTokenAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId);
@@ -23,7 +23,9 @@ const generateAccessTokenAndRefreshToken = async (userId) => {
     }
 }
 
-//registerUser mathod
+
+
+//registerUser function-backend
 const registerUser = asyncHandler(async (req, res) => {
     const { fullName, email, username, password } = req.body;
     // console.log("email:", email)
@@ -76,7 +78,7 @@ const registerUser = asyncHandler(async (req, res) => {
         password
     })
 
-    //remove password and refreshToken
+    //remove password and refreshToken from the create user
     const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
     )
@@ -85,6 +87,7 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Something went wrong while registering the user")
     }
 
+    //return a success response
     return res.status(201).json(
         new ApiResponse(200, createdUser, "User registered successfully")
     )
@@ -92,10 +95,13 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
 
-//loginUser method
+//loginUser function-backend
 const loginUser = asyncHandler(async (req, res) => {
+
+    //extract login credinatials from the body
     const { username, email, password } = req.body;
-    // console.log(email)
+
+    // console.log(email) // debbuging the body
 
     if (!username && !email) {
         throw new ApiError(400, "username or email is required")
@@ -107,10 +113,10 @@ const loginUser = asyncHandler(async (req, res) => {
     })
 
     if (!user) {
-        throw new ApiError(404, "user not found")
+        throw new ApiError(404, "User not found")
     }
 
-    //compare password
+    //compare provided password and stored one
     const isPasswordvalid = await user
         .isPasswordCorrect(password)
 
@@ -118,18 +124,22 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Invalid user Credentials")
     }
 
-    //send refreshToken and AccessToken
+    //generate refreshToken and AccessToken
     const { refreshToken, accessToken } = await
         generateAccessTokenAndRefreshToken(user._id)
 
+
+    //retrive user info without sensitive feilds
     const loggedInUser = await User.findById(user._id).
         select("-password -refreshToken")
 
+    //there's are the cookie settings
     const options = {
         httpOnly: true,
         secure: true
     }
 
+    //return a success response
     return res.status(200)
         .cookie("accessToken", accessToken, options)
         .cookie("refreshToken", refreshToken, options)
@@ -146,7 +156,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
 
 
-//logoutUser function
+//logoutUser function-backend
 const logoutUser = asyncHandler(async (req, res) => {
 
     //update the user in the database and clear the refresh token
@@ -167,6 +177,7 @@ const logoutUser = asyncHandler(async (req, res) => {
         secure: true
     }
 
+    //return succsee response and clear the cookies
     return res.status(200)
         .clearCookie("accessToken", options)
         .clearCookie("refreshToken", options)
@@ -174,7 +185,8 @@ const logoutUser = asyncHandler(async (req, res) => {
 })
 
 
-//refreshAccessToken function
+
+//refreshAccessToken function-backend
 
 //Why we use this method?
 /* The refreshAccessToken method is used when a user has been active for a long time and the token expires.
@@ -182,22 +194,28 @@ If the user tries to continue their session by re-logging in, this method sends 
 The backend then compares the provided refresh token with the stored one, and if they match, the session is restarted. */
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
+
+    //extract the refreshToken form cookies or body
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
+    //check the refreshToken is present or not 
     if (!incomingRefreshToken) {
         throw new ApiError(401, "Unauthorized request")
     }
 
+    //verifying the token
     try {
         const decodedToken = jwt
             .verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
 
+        //find the user by there id
         const user = await User.findById(decodedToken?._id)
 
         if (!user) {
             throw new ApiError(401, "Invalid refresh token")
         }
 
+        //check the refreshToken is valid or invalid by comparing other token
         if (incomingRefreshToken !== user?.refreshToken) {
             throw new ApiError(401, "Refresh token is expried or used")
         }
@@ -208,9 +226,10 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             sameSite: "None"
         }
 
+        //generate the new tokens
         const { accessToken, newRefreshToken } = await generateAccessTokenAndRefreshToken(user._id)
 
-
+        //return success response and cookies
         return res.status(200)
             .cookie("accessToken", accessToken, options)
             .cookie("refreshToken", newRefreshToken, options)
@@ -230,10 +249,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 })
 
 
+// export the function to be used in other files
 export {
     loginUser,
     logoutUser,
     refreshAccessToken,
     registerUser
-}; // export the function to be used in other files
+};
 
