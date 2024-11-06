@@ -372,13 +372,94 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 })
 
 
+
+//get user channel profile function backend
+const getUserChennelProfile = asyncHandler(async (req, res) => {
+    const { username } = req.param
+
+    if (!username?.trim()) {
+        throw new ApiError(400, "Username is missing")
+    }
+
+    //db aggregation pipeline
+    const chaneel = await User.aggregate([
+        {
+            $match: {
+                username: username?.toLowerCase()
+            }
+        },
+        {
+            $lookup: {
+                from: "subscruptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        {
+            $lookup: {
+                from: "subscruptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {
+            $addFields: {
+                subscribersCount: {
+                    $size: "$subscribers"
+                },
+                channelSubscribedToCount: {
+                    $size: "$subscribedTo"
+                },
+                isSubscribed: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$subscribers.subscriber"]},
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                fullName: 1,
+                username: 1,
+                email: 1,
+                subscribersCount: 1,
+                channelSubscribedToCount: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1
+            }
+        }
+    ])
+
+    console.log(chaneel) // debbuging code
+
+    if (!chaneel?.length) {
+        throw new ApiError(404, "Channel dose not exists")
+    }
+
+    //return a success response
+    return res.status(200)
+    .json(
+        new ApiResponse(200, chaneel[0], "User channel fetched successfully")
+    )
+})
+
+
+
 // export the function to be used in other files
 export {
     changeCurrentUserPassword,
-    getCurrentUser, loginUser,
+    getCurrentUser,
+    getUserChennelProfile,
+    loginUser,
     logoutUser,
     refreshAccessToken,
-    registerUser, updateUserAccountDetails,
+    registerUser,
+    updateUserAccountDetails,
     updateUserAvatar,
     updateUserCoverImage
 };
