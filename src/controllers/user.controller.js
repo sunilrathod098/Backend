@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -279,7 +280,7 @@ const changeCurrentUserPassword = asyncHandler(async (req, res) => {
 //this function is for get current user for backend
 const getCurrentUser = asyncHandler(async (req, res) => {
     return res.status(200)
-        .json(200, req.user, "Current user is fetched successfully")
+        .json(200, req.user, "Current user is retrieved successfully")
 })
 
 
@@ -444,10 +445,65 @@ const getUserChennelProfile = asyncHandler(async (req, res) => {
     //return a success response
     return res.status(200)
     .json(
-        new ApiResponse(200, chaneel[0], "User channel fetched successfully")
+        new ApiResponse(200, chaneel[0], "User channel retrieved successfully")
     )
 })
 
+
+
+//get watch history from user functions
+const getWatchHistrory = asyncHandler( async (req, res) => {
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user?._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "Video",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields: {
+                            owner: {
+                                $first: "$owner"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user[0].watchHistrory,
+            "Watch history retrieved successfully"
+        )
+    )
+})
 
 
 // export the function to be used in other files
@@ -455,6 +511,7 @@ export {
     changeCurrentUserPassword,
     getCurrentUser,
     getUserChennelProfile,
+    getWatchHistrory,
     loginUser,
     logoutUser,
     refreshAccessToken,
