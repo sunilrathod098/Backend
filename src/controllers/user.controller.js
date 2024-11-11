@@ -1,11 +1,10 @@
-import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
-import { User } from "../models/user.model.js";
-import { ApiError } from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloud } from "../utils/fileUpload.js";
-
+import { ApiError } from "../utils/ApiError.js"
+import { User } from "../models/user.model.js"
+import { uploadOnCloud } from "../utils/fileUpload.js"
+import { ApiResponse } from "../utils/ApiResponse.js";
+import jwt from "jsonwebtoken"
+import mongoose from "mongoose"
 
 //generate token function-backend
 const generateAccessTokenAndRefreshToken = async (userId) => {
@@ -126,7 +125,7 @@ const loginUser = asyncHandler(async (req, res) => {
     }
 
     //generate refreshToken and AccessToken
-    const { refreshToken, accessToken } = await
+    const { accessToken, refreshToken } = await
         generateAccessTokenAndRefreshToken(user._id)
 
 
@@ -280,7 +279,12 @@ const changeCurrentUserPassword = asyncHandler(async (req, res) => {
 //this function is for get current user for backend
 const getCurrentUser = asyncHandler(async (req, res) => {
     return res.status(200)
-        .json(200, req.user, "Current user is retrieved successfully")
+        .json(
+            new ApiResponse(
+                200,
+                req.user,
+                "Current user is retrieved successfully"
+            ))
 })
 
 
@@ -293,7 +297,7 @@ const updateUserAccountDetails = asyncHandler(async (req, res) => {
         throw new ApiResponse(400, "All fields are required")
     }
 
-    User.findByIdAndUpdate(
+    const user = User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
@@ -301,11 +305,26 @@ const updateUserAccountDetails = asyncHandler(async (req, res) => {
                 email
             }
         },
-        { new: true }
+        {
+            new: true
+        }
     ).select("-password")
 
+    // Check if user was found and updated
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    console.log(user)
+
     return res.status(200)
-        .json(new ApiResponse(200, user, "Account details updated successfully"))
+        .json(
+            new ApiResponse(
+                200,
+                user,
+                "Account details updated successfully"
+            )
+        )
 })
 
 
@@ -335,10 +354,16 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         {
             new: true
         }
-    )
+    ).select("-password")
 
     return res.status(200)
-        .json(new ApiResponse(200, user, "Update avatar successfully"))
+        .json(
+            new ApiResponse(
+                200,
+                user,
+                "Avatar image updated successfully"
+            )
+        )
 })
 
 
@@ -366,24 +391,24 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
             }
         },
         { new: true }
-    )
+    ).select("-password")
 
     return res.status(200)
-        .json(200, ApiResponse(200, user, "Update cover image succseefully"))
+        .json(200, ApiResponse(200, user, "Cover image updated succseefully"))
 })
 
 
 
 //get user channel profile function backend
 const getUserChennelProfile = asyncHandler(async (req, res) => {
-    const { username } = req.param
+    const { username } = req.params
 
     if (!username?.trim()) {
         throw new ApiError(400, "Username is missing")
     }
 
     //db aggregation pipeline
-    const chaneel = await User.aggregate([
+    const channel = await User.aggregate([
         {
             $match: {
                 username: username?.toLowerCase()
@@ -436,16 +461,16 @@ const getUserChennelProfile = asyncHandler(async (req, res) => {
         }
     ])
 
-    console.log(chaneel) // debbuging code
+    console.log(channel) // debbuging code
 
-    if (!chaneel?.length) {
+    if (!channel?.length) {
         throw new ApiError(404, "Channel dose not exists")
     }
 
     //return a success response
     return res.status(200)
     .json(
-        new ApiResponse(200, chaneel[0], "User channel retrieved successfully")
+        new ApiResponse(200, channel[0], "User channel retrieved successfully")
     )
 })
 
@@ -456,12 +481,12 @@ const getWatchHistrory = asyncHandler( async (req, res) => {
     const user = await User.aggregate([
         {
             $match: {
-                _id: new mongoose.Types.ObjectId(req.user?._id)
+                _id: new mongoose.Types.ObjectId(req.user._id)
             }
         },
         {
             $lookup: {
-                from: "Video",
+                from: "videos",
                 localField: "watchHistory",
                 foreignField: "_id",
                 as: "watchHistory",
