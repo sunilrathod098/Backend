@@ -8,7 +8,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-//upload image to cloudinary function
+//upload image and videos in cloudinary function
 const uploadOnCloud = async (localfilePath) => {
     try {
         if (!localfilePath) return null
@@ -30,4 +30,19 @@ const uploadOnCloud = async (localfilePath) => {
     }
 }
 
-export { uploadOnCloud };
+
+//delete image and videos files from cloudinary function
+const deleteFromCloud = async(publicId, resourceType = "image") => {
+    try {
+        const fileResponse = await cloudinary.uploader.destroy(publicId, {
+            resource_type: resourceType
+        });
+        return fileResponse;
+    } catch (error) {
+        console.log("Error deleting asset from cloud: ", error.message);
+        return null;
+    }
+}
+
+export { deleteFromCloud, uploadOnCloud };
+
