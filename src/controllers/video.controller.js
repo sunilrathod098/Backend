@@ -76,7 +76,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
                 _id: 1,
                 owner: 1,
                 videoFile: 1,
-                thumbnailFile: 1,
+                thumbnail: 1,
                 createdAt: 1,
                 description: 1,
                 title: 1,
@@ -170,7 +170,7 @@ const getUserVideos = asyncHandler(async (req, res) => {
                 _id: 1,
                 owner: 1,
                 videoFile: 1,
-                thumbnailFile: 1,
+                thumbnail: 1,
                 createdAt: 1,
                 description: 1,
                 title: 1,
@@ -199,7 +199,12 @@ const getUserVideos = asyncHandler(async (req, res) => {
 const getPublishedAVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body;
     const videoLocalPath = req.files?.videoFile[0]?.path;
-    const thumbnailLocalPath = req.files?.thumbnailFile[0]?.path;
+    const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
+
+    if (!title || title.trim() === '') {
+        unlinkPath(videoLocalPath, thumbnailLocalPath);
+        throw new ApiError(400, "Title is required");
+    }
 
     if (!videoLocalPath) {
         unlinkPath(videoLocalPath, thumbnailLocalPath);
@@ -212,24 +217,24 @@ const getPublishedAVideo = asyncHandler(async (req, res) => {
     }
 
     const videoFile = await uploadOnCloud(videoLocalPath);
-    const thumbnailFile = await uploadOnCloud(thumbnailLocalPath);
+    const thumbnail = await uploadOnCloud(thumbnailLocalPath);
 
 
-    if (!videoFile || !thumbnailFile) {
+    if (!videoFile || !thumbnail) {
         throw new ApiError(400, "Video and thumbnail files are missing")
     }
 
     const video = await Video.create({
         videoFile: videoFile?.secure_url,
-        thumbnailFile: thumbnailFile?.secure_url,
+        thumbnail: thumbnail?.secure_url,
         title,
         duration: videoFile?.duration,
-        description: videoFile?.description || "",
+        description: description || "",
         owner: req.user?._id,
-        views: 0,
-        likes: 0,
-        dislikes: 0,
-        comments: []
+        // views: 0,
+        // likes: 0,
+        // dislikes: 0,
+        // comments: []
     });
 
     if (!video) {
@@ -336,7 +341,7 @@ const getVideoById = asyncHandler(async (req, res) => {
         {
             $project: {
                 videoFile: 1,
-                thumbnailFile: 1,
+                thumbnail: 1,
                 title: 1,
                 description: 1,
                 duration: 1,
@@ -407,16 +412,16 @@ const getUpdateVideo = asyncHandler(async (req, res) => {
             "You do not have permission to perform this action and your not owner to this video!")
     }
 
-    let thumbnailFile;
+    let thumbnail;
     if (thumbnailLocalPath) {
-        thumbnailFile = await uploadOnCloud(thumbnailLocalPath);
+        thumbnail = await uploadOnCloud(thumbnailLocalPath);
 
-        if (!thumbnailFile) {
+        if (!thumbnail) {
             throw new ApiError(400, "Error while uploading thumbnail on cloud");
         } else {
-            const thumbnailFileUrl = video?.thumbnailFile;
+            const thumbnailUrl = video?.thumbnail;
             const regex = /\/([^/]+)\.[^.]+$/;
-            const match = thumbnailFileUrl?.match(regex);
+            const match = thumbnailUrl?.match(regex);
 
             if (!match) {
                 throw new ApiError(400, "Couldn't find public Id of Old thumbnail")
@@ -433,7 +438,7 @@ const getUpdateVideo = asyncHandler(async (req, res) => {
             $set: {
                 title: title || video?.title,
                 description: description || video?.description,
-                thumbnailFile: thumbnailFile?.secure_url || video?.thumbnailFile,
+                thumbnail: thumbnail?.secure_url || video?.thumbnail,
             }
         }
     );
@@ -467,18 +472,18 @@ const getDeleteVideo = asyncHandler(async (req, res) => {
 
     await Video.findByIdAndUpdate(videoId);
 
-    const thumbnailFileUrl = video?.thumbnailFile;
+    const thumbnailUrl = video?.thumbnail;
     const videoFileUrl = video?.videoFile;
     const regex = /\/([^/]+)\.[^.]+$/;
 
 
-    let match = thumbnailFileUrl.match(regex);
+    let match = thumbnailUrl.match(regex);
     if (!match) {
         throw new ApiError(400, "Couldn't find public Id of thumbnail")
     }
 
     let publicId = match[1];
-    const deleteThumbnailFile = await deleteFromCloud(publicId);
+    const deleteThumbnail = await deleteFromCloud(publicId);
 
     match = videoFileUrl.match(regex);
     if (!match) {
@@ -487,7 +492,7 @@ const getDeleteVideo = asyncHandler(async (req, res) => {
 
     publicId = match[1];
     const deleteVideoFile = await deleteFromCloud(publicId, "video");
-    if (deleteThumbnailFile.result !== "ok") {
+    if (deleteThumbnail.result !== "ok") {
         throw new ApiError(500, "Error while deleting thumbnail from cloud");
     }
 
@@ -578,7 +583,7 @@ const getSubcribedVideos = asyncHandler(async (req, res) => {
                 _id: 1,
                 owner: 1,
                 videoFile: 1,
-                thumbnailFile: 1,
+                thumbnail: 1,
                 createdAt: 1,
                 description: 1,
                 title: 1,
