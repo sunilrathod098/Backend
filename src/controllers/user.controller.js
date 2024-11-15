@@ -1,10 +1,10 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiError } from "../utils/ApiError.js"
-import { User } from "../models/user.model.js"
-import { uploadOnCloud } from "../utils/fileUpload.js"
+import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+import { User } from "../models/user.model.js";
+import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import jwt from "jsonwebtoken"
-import mongoose from "mongoose"
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { uploadOnCloud } from "../utils/fileUpload.js";
 
 //generate token function-backend
 const generateAccessTokenAndRefreshToken = async (userId) => {
@@ -252,20 +252,35 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 //user current password change in this function-backend
 const changeCurrentUserPassword = asyncHandler(async (req, res) => {
 
-    const { oldPassword, newPassword } = req.body
-
     // // if we want confromPassword also for advannce secutrity parpase
     // const {oldPassword, newPassword, conformPassword} = req.body
     // if (!(newPassword === conformPassword)) {
     //     throw new ApiError(400, "NewPassword and ConformPassword dose not match")
     // }
 
+    const { oldPassword, newPassword } = req.body
+
+    if (!oldPassword || !newPassword) {
+        throw new ApiError(400, "Old Password and new password are required");
+    }
+
     const user = await User.findById(req.user?._id)
+    if (!user) {
+        throw new ApiError(400, "User not found");
+    }
+
+
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
 
     if (!isPasswordCorrect) {
         throw new ApiError(400, "Invalid old password")
     }
+
+    // Log information to verify values before proceeding
+    console.log("Old Password:", oldPassword);
+    console.log("New Password:", newPassword);
+    console.log("User ID:", req.user?._id);
+    console.log("Is Password Correct:", isPasswordCorrect);
 
     user.password = newPassword
     await user.save({ validateBeforeSave: false })

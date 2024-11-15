@@ -1,6 +1,6 @@
 import fs from "fs";
 import mongoose, { isValidObjectId } from "mongoose";
-import { Subscruption } from "../models/subscription.model.js";
+import { Subscription } from "../models/subscription.model.js";
 import { User } from "../models/user.model.js";
 import { Video } from "../models/video.model.js";
 import { ApiError } from "../utils/ApiError.js";
