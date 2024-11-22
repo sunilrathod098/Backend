@@ -79,7 +79,7 @@ const getUserPlaylist = asyncHandler(async (req, res) => {
 
 
 //this function is used for get a playlist by there Id
-const getPlaylistById = asyncHandler(async(req, res) => {
+const getUserPlaylistById = asyncHandler(async(req, res) => {
     const { playlistId } = req.params;
 
     if (!playlistId || !isValidObjectId(playlistId)) {
@@ -180,7 +180,7 @@ const addVideoToPlaylist = asyncHandler( async (req, res) => {
 
 
 //delete video from playlist
-const deleteVideoFromPlaylist = asyncHandler( async (req, res) => {
+const removeVideoFromPlaylist = asyncHandler( async (req, res) => {
     const { playlistId, videoId} = req.params;
 
     //check-validation
@@ -215,7 +215,7 @@ const deleteVideoFromPlaylist = asyncHandler( async (req, res) => {
     }
 
     //here is the remove/delete video from the playlist
-    const videoDeletedFromPlaylist = await Playlist.findByIdAndUpdate(playlistId,
+    const videoRemovedFromPlaylist = await Playlist.findByIdAndUpdate(playlistId,
         {
             $pull: {
                 videos: new mongoose.Types.ObjectId(videoId)
@@ -226,14 +226,14 @@ const deleteVideoFromPlaylist = asyncHandler( async (req, res) => {
         }
     );
 
-    if (!videoDeletedFromPlaylist) {
+    if (!videoRemovedFromPlaylist) {
         throw new ApiError(400, "Could not delete video from the playlist")
     }
 
     return res.status(200)
     .json(new ApiResponse(200,
         {
-            "Updated playlist: ": videoDeletedFromPlaylist
+            "Updated playlist: ": videoRemovedFromPlaylist
         },
         "Video deleted from the playlist successfully"
     ));
@@ -334,9 +334,9 @@ const getVideoPlaylist = asyncHandler( async (req, res) => {
 export{
     createPlaylist,
     getUserPlaylist,
-    getPlaylistById,
+    getUserPlaylistById,
     addVideoToPlaylist,
-    deleteVideoFromPlaylist,
+    removeVideoFromPlaylist,
     deletePlaylist,
     updatePlaylist,
     getVideoPlaylist
