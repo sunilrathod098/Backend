@@ -1,8 +1,8 @@
 import mongoose, { isValidObjectId } from "mongoose";
-import { ApiError } from "../utils/ApiError.js"
-import { ApiResponse } from "../utils/ApiResponse.js"
-import { Tweet } from "../models/tweets.model.js"
-import { asyncHandler } from "../utils/asyncHandler.js"
+import { Tweet } from "../models/tweets.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 
 //this function is working as create tweets
@@ -154,14 +154,16 @@ const getAllTweets = asyncHandler(async (req, res) => {
                 foreignFields: "_id",
                 as: "owner",
                 pipeline: [
-                    $project: {
+                    {
+                        $project:{
                         _id: 1,
                         username: 1,
                         fullName: 1,
                         avatar: 1,
                     }
-                ]
-            }
+                }
+                ],
+            },
         },
         {
             $addFields: {
@@ -208,7 +210,7 @@ const getAllTweets = asyncHandler(async (req, res) => {
     ]);
 
     if (!tweets) {
-        throw new ApiError{ 401, "Error while fetching tweets" }
+        throw new ApiError( 401, "Error while fetching tweets" )
     }
 
     return res.status(200)
@@ -231,7 +233,7 @@ const updatedTweet = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid tweet Id")
     }
 
-    const tweets = await Tweet.findById(tweetId); \
+    const tweets = await Tweet.findById(tweetId);
     if (!tweets) {
         throw new ApiError(500, "Tweet not found")
     }
@@ -362,9 +364,5 @@ const deleteTweet = asyncHandler(async (req, res) => {
 
 
 export {
-    createTweet,
-    getUserByTweets,
-    getAllTweets,
-    updatedTweet,
-    deleteTweet
-}
+    createTweet, deleteTweet, getAllTweets, getUserByTweets, updatedTweet
+};
