@@ -18,7 +18,7 @@ const router = Router()
 
 
 router.route("/all-videos").get(getAllVideos)
-router.route("/c/:videoId").get(getUserVideos)
+router.route("/user/:userId/videos").get(getUserVideos)
 router.route("/:videoId").get(checkUser, getVideoById)
 
 router.use(verifyJWT);

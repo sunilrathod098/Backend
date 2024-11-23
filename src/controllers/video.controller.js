@@ -1,20 +1,20 @@
 import fs from "fs";
 import mongoose, { isValidObjectId } from "mongoose";
-import { Subscription } from "../models/subscription.model.js";
 import { User } from "../models/user.model.js";
 import { Video } from "../models/video.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { deleteFromCloud, uploadOnCloud } from "../utils/fileUpload.js";
+import { unlinkPath } from "../utils/UnlinkPath.js";
+import { Subscription } from "../models/subscription.model.js"
 
-
-function unlinkPath(videoLocalPath, thumbnailLocalPath) {
-    if (videoLocalPath)
-        fs.unlinkSync(videoLocalPath);
-    if (thumbnailLocalPath)
-        fs.unlinkSync(thumbnailLocalPath);
-}
+// function unlinkPath(videoLocalPath, thumbnailLocalPath) {
+//     if (videoLocalPath)
+//         fs.unlinkSync(videoLocalPath);
+//     if (thumbnailLocalPath)
+//         fs.unlinkSync(thumbnailLocalPath);
+// }
 
 
 // function retrieves all videos from a db
@@ -104,20 +104,21 @@ const getAllVideos = asyncHandler(async (req, res) => {
         .json(new ApiResponse(
             200,
             videos,
-            "Videos retrived successfully"));
+            "Videos retrieved successfully"));
 });
 
 
 
 //function retrives indiviual videos fron a db
 const getUserVideos = asyncHandler(async (req, res) => {
-    const {
-        page = 1,
-        limit = 10,
-        sortType = "desc"
-    } = req.query;
+    const { page = 1, limit = 10, sortType = "desc", sortBy = "createdAt" } = req.query;
+
 
     const { userId } = req.params;
+
+    // console.log("User ID: ", userId);
+    // console.log("req params:", req.params);
+
 
     if (!mongoose.isValidObjectId(userId)) {
         throw new ApiError(400, "Invalid user Id")
@@ -133,7 +134,7 @@ const getUserVideos = asyncHandler(async (req, res) => {
             $match: { isPublished: true }
         },
         {
-            $sort: { [sortBy]: sortType === "asc" ? 1 : -1 },
+            $sort: { createdAt: sortType === "asc" ? 1 : -1 },
         },
         {
             $skip: (page - 1) * limit,
@@ -197,55 +198,60 @@ const getUserVideos = asyncHandler(async (req, res) => {
 
 //this function is published a video
 const getPublishedAVideo = asyncHandler(async (req, res) => {
-    const { title, description } = req.body;
-    const videoLocalPath = req.files?.videoFile[0]?.path;
-    const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
-
-    if (!title || title.trim() === '') {
-        unlinkPath(videoLocalPath, thumbnailLocalPath);
-        throw new ApiError(400, "Title is required");
+    try {
+        const { title, description } = req.body;
+        const videoLocalPath = req.files?.videoFile[0]?.path;
+        const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
+    
+        // console.log(req.body); // Log request body
+        // console.log(req.files); // Log uploaded files
+        
+        if (!title || title.trim() === '') {
+            unlinkPath(videoLocalPath, thumbnailLocalPath);
+            throw new ApiError(400, "Title is required");
+        }
+    
+        if (!videoLocalPath) {
+            unlinkPath(videoLocalPath, thumbnailLocalPath);
+            throw new ApiError(400, "Video file is required");
+        }
+    
+        if (!thumbnailLocalPath) {
+            unlinkPath(videoLocalPath, thumbnailLocalPath);
+            throw new ApiError(400, "Thumbnail is required")
+        }
+    
+        const videoFile = await uploadOnCloud(videoLocalPath);
+        const thumbnail = await uploadOnCloud(thumbnailLocalPath);
+    
+    
+        if (!videoFile || !thumbnail) {
+            throw new ApiError(400, "Video and thumbnail files are missing")
+        }
+    
+        const video = await Video.create({
+            videoFile: videoFile?.secure_url,
+            thumbnail: thumbnail?.secure_url,
+            title,
+            duration: videoFile?.duration,
+            description: description || "",
+            owner: req.user?._id,
+            isPublished: true,
+        });
+    
+        if (!video) {
+            throw new ApiError(500, "Error while uploading videos")
+        }
+    
+        return res.status(200)
+            .json(new ApiResponse(
+                200,
+                video,
+                "Video uploaded successfully"))
+    } catch (error) {
+        console.log(error)
+        return res.status(new ApiError(500, "Internal Server error"))
     }
-
-    if (!videoLocalPath) {
-        unlinkPath(videoLocalPath, thumbnailLocalPath);
-        throw new ApiError(400, "Video file is required");
-    }
-
-    if (!thumbnailLocalPath) {
-        unlinkPath(videoLocalPath, thumbnailLocalPath);
-        throw new ApiError(400, "Thumbnail is required")
-    }
-
-    const videoFile = await uploadOnCloud(videoLocalPath);
-    const thumbnail = await uploadOnCloud(thumbnailLocalPath);
-
-
-    if (!videoFile || !thumbnail) {
-        throw new ApiError(400, "Video and thumbnail files are missing")
-    }
-
-    const video = await Video.create({
-        videoFile: videoFile?.secure_url,
-        thumbnail: thumbnail?.secure_url,
-        title,
-        duration: videoFile?.duration,
-        description: description || "",
-        owner: req.user?._id,
-        // views: 0,
-        // likes: 0,
-        // dislikes: 0,
-        // comments: []
-    });
-
-    if (!video) {
-        throw new ApiError(500, "Error while uploading videos")
-    }
-
-    return res.status(200)
-        .json(new ApiResponse(
-            200,
-            video,
-            "Video uploaded successfully"))
 })
 
 
@@ -262,7 +268,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     const video = await Video.aggregate([
         {
             $match: {
-                _id: mongoose.Types.ObjectId(videoId)
+                _id: new mongoose.Types.ObjectId(videoId)
             },
         },
         {
@@ -400,12 +406,15 @@ const getUpdateVideo = asyncHandler(async (req, res) => {
     }
 
     const video = await Video.findById(videoId);
+
+    console.log(video)
+
     if (!video) {
         unlinkPath(null, thumbnailLocalPath);
         throw new ApiError(404, "Video not found")
     }
 
-    if (req.user?._id.ToString() !== video?.owner.ToString()) {
+    if (req.user?._id.toString() !== video?.owner.toString()) {
         unlinkPath(null, thumbnailLocalPath)
         throw new ApiError(
             403,
@@ -470,7 +479,7 @@ const getDeleteVideo = asyncHandler(async (req, res) => {
         throw new ApiError(401, "You do not have permission to delete this video")
     }
 
-    await Video.findByIdAndUpdate(videoId);
+    await Video.findByIdAndDelete(videoId);
 
     const thumbnailUrl = video?.thumbnail;
     const videoFileUrl = video?.videoFile;
@@ -515,11 +524,14 @@ const getSubcribedVideos = asyncHandler(async (req, res) => {
         sortType = "desc"
     } = req.query;
 
-    const subscription = await Subscruption.find({
-        subscriber: new mongoose.Types.ObjectId(req, user?._id),
+    const subscription = await Subscription.find({
+        subscriber: new mongoose.Types.ObjectId(req.user?._id),
     }).select("channel");
 
-    const channelId = subscriptions.map((sub) => sub.channel);
+    //degbugging
+    // console.log(subscription)
+
+    const channelId = subscription.map((sub) => sub.channel);
 
     if (channelId.length === 0) {
         return res.status(200)
@@ -613,19 +625,23 @@ const togglePublishedStatus = asyncHandler(async (req, res) => {
     }
 
     const videos = await Video.findById(videoId)
+
+    //debugging
+    // console.log(videos)
+
     if (!videos) {
         throw new ApiError(404, "Video is not found")
     }
 
-    if (video?.owner.toString() !== req.user?._id.toString()) {
-        if (!video) {
+    if (videos?.owner.toString() !== req.user?._id.toString()) {
+        if (!videos) {
             throw new ApiError(401, "You do not have the permission to perform to this action")
         }
     }
 
     const updatevideo = await Video.findByIdAndUpdate(videoId, {
         $set: {
-            isPublished: !video?.isPublished
+            isPublished: !videos?.isPublished
         },
     },
         {

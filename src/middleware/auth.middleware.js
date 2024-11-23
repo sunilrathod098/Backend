@@ -42,6 +42,12 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
     } catch (error) {
         // Debugging: Log the error
         console.error("JWT Verification Error:", error.message);
+
+        // If jwt.verify throws an error, it's usually because of an invalid or expired token
+        if (error.name === "TokenExpiredError") {
+            throw new ApiError(401, "Token has expired, please log in again");
+        }
+
         throw new ApiError(401, error?.message || "Invalid access Token")
     }
 })
