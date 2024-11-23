@@ -9,7 +9,12 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 const createTweet = asyncHandler(async (req, res) => {
     const { content } = req.body;
 
-    if (!content.trim()) {
+    // console.log(req.body)
+
+    //debugg
+    // console.log(content);
+
+    if (!content || !content.trim()) {
         throw new ApiError(400, "Tweet cannot be empty");
     }
 
@@ -17,6 +22,9 @@ const createTweet = asyncHandler(async (req, res) => {
         content,
         owner: req.user?._id,
     });
+
+    //debbug
+    console.log(tweet);
 
     if (!tweet) {
         throw new ApiError(500, "Error while adding tweets")
@@ -41,10 +49,10 @@ const getUserByTweets = asyncHandler(async (req, res) => {
         throw new ApiError(400, "No valid user Id found")
     }
 
-    const tweets = Tweet.aggregate([
+    const tweets = await Tweet.aggregate([
         {
             $match: {
-                owner: mongoose.Types.ObjectId(userId),
+                owner: new mongoose.Types.ObjectId(userId),
             }
         },
         {
@@ -59,8 +67,8 @@ const getUserByTweets = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "users",
-                localFields: "owner",
-                foreignFields: "_id",
+                localField: "owner",
+                foreignField: "_id",
                 as: "owner",
                 pipeline: [
                     {
@@ -84,8 +92,8 @@ const getUserByTweets = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "likes",
-                localFields: "_id",
-                foreignFields: "tweet",
+                localField: "_id",
+                foreignField: "tweet",
                 as: "likes"
             }
         },
@@ -118,7 +126,7 @@ const getUserByTweets = asyncHandler(async (req, res) => {
         }
     ]);
 
-    if (!tweets) {
+    if (!tweets || tweets.length === 0) {
         throw new ApiError(401, "Error while retrieved tweets")
     }
 
@@ -150,8 +158,8 @@ const getAllTweets = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "users",
-                localFields: "owner",
-                foreignFields: "_id",
+                localField: "owner",
+                foreignField: "_id",
                 as: "owner",
                 pipeline: [
                     {
@@ -175,8 +183,8 @@ const getAllTweets = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "likes",
-                localFields: "_id",
-                foreignFields: "tweet",
+                localField: "_id",
+                foreignField: "tweet",
                 as: "likes"
             }
         },
@@ -222,8 +230,16 @@ const getAllTweets = asyncHandler(async (req, res) => {
 
 //update the tweets
 const updatedTweet = asyncHandler(async (req, res) => {
+
+    // console.log("Request Params: ", req.params); // Log request params
+    // console.log("Request Body: ", req.body); // Log request body
+
     const { content } = req.body;
-    const { tweetId } = req.params.id;
+    const tweetId  = req.params.tweetId;
+
+    // console.log("Content: ", content); // Log content
+    // console.log("Tweet ID: ", tweetId); // Log tweetId
+
 
     if (!content?.trim()) {
         throw new ApiError(401, "tweet cannot be empty")
@@ -238,7 +254,7 @@ const updatedTweet = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Tweet not found")
     }
 
-    if (tweet.owner.toString() !== req.user?._id.toString()) {
+    if (tweets.owner.toString() !== req.user?._id.toString()) {
         throw new ApiError(401,
             "You are not the owner of this tweet and you do not have any permission to update this tweet.")
     }
@@ -263,8 +279,8 @@ const updatedTweet = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "users",
-                localFields: "owner",
-                foreignFields: "_id",
+                localField: "owner",
+                foreignField: "_id",
                 as: "owner",
                 pipeline: [
                     {
