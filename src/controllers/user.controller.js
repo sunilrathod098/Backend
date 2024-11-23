@@ -60,9 +60,15 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Avatar files is required")
     }
 
+    // console.log(avatarLocalPath)
+
     //uploading files on cloudinary
     const avatar = await uploadOnCloud(avatarLocalPath)
     const coverImage = await uploadOnCloud(coverImageLocalPath)
+
+    //debugging
+    // console.log(avatar)
+    // console.log(coverImage)
 
     if (!avatar) {
         throw new ApiError(400, "Avatar file is required")
@@ -117,8 +123,7 @@ const loginUser = asyncHandler(async (req, res) => {
     }
 
     //compare provided password and stored one
-    const isPasswordvalid = await user
-        .isPasswordCorrect(password)
+    const isPasswordvalid = await user.isPasswordCorrect(password)
 
     if (!isPasswordvalid) {
         throw new ApiError(401, "Invalid user Credentials")
@@ -159,6 +164,10 @@ const loginUser = asyncHandler(async (req, res) => {
 //logoutUser function-backend
 const logoutUser = asyncHandler(async (req, res) => {
 
+    if (!req.user || !req.user._id) {
+        throw new ApiError(401, "User is not authenticated")
+    }
+
     //update the user in the database and clear the refresh token
     await User.findByIdAndUpdate(
         req.user._id,
@@ -198,15 +207,14 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     //extract the refreshToken form cookies or body
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
-    //check the refreshToken is present or not 
+    //check the refreshToken is present or not
     if (!incomingRefreshToken) {
         throw new ApiError(401, "Unauthorized request")
     }
 
     //verifying the token
     try {
-        const decodedToken = jwt
-            .verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+        const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
 
         //find the user by there id
         const user = await User.findById(decodedToken?._id)
@@ -251,18 +259,17 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 //user current password change in this function-backend
 const changeCurrentUserPassword = asyncHandler(async (req, res) => {
-
-    // // if we want confromPassword also for advannce secutrity parpase
-    // const {oldPassword, newPassword, conformPassword} = req.body
-    // if (!(newPassword === conformPassword)) {
-    //     throw new ApiError(400, "NewPassword and ConformPassword dose not match")
-    // }
-
     const { oldPassword, newPassword } = req.body
 
     if (!oldPassword || !newPassword) {
         throw new ApiError(400, "Old Password and new password are required");
     }
+
+    // // Log information to verify values before proceeding
+    // console.log("Old Password:", oldPassword);
+    // console.log("New Password:", newPassword);
+    // console.log("User ID:", req.user?._id);
+
 
     const user = await User.findById(req.user?._id)
     if (!user) {
@@ -270,17 +277,14 @@ const changeCurrentUserPassword = asyncHandler(async (req, res) => {
     }
 
 
-    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+    const isOldPasswordCorrect = await user.isPasswordCorrect(oldPassword)
 
-    if (!isPasswordCorrect) {
+    if (!isOldPasswordCorrect) {
         throw new ApiError(400, "Invalid old password")
     }
 
-    // Log information to verify values before proceeding
-    console.log("Old Password:", oldPassword);
-    console.log("New Password:", newPassword);
-    console.log("User ID:", req.user?._id);
-    console.log("Is Password Correct:", isPasswordCorrect);
+    // // Log information to verify values before proceeding
+    // console.log("Is Password Correct:", isOldPasswordCorrect);
 
     user.password = newPassword
     await user.save({ validateBeforeSave: false })
@@ -312,7 +316,7 @@ const updateUserAccountDetails = asyncHandler(async (req, res) => {
         throw new ApiResponse(400, "All fields are required")
     }
 
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
@@ -330,7 +334,7 @@ const updateUserAccountDetails = asyncHandler(async (req, res) => {
         throw new ApiError(404, "User not found");
     }
 
-    console.log(user)
+    // console.log(user)
 
     return res.status(200)
         .json(
@@ -409,7 +413,11 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     ).select("-password")
 
     return res.status(200)
-        .json(200, ApiResponse(200, user, "Cover image updated succseefully"))
+        .json(
+            new ApiResponse(
+                200,
+                user,
+                "Cover image updated succseefully"))
 })
 
 

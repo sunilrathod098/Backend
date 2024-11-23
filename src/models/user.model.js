@@ -68,8 +68,9 @@ userSchema.pre("save", async function (next) {
 //this method is user for decrypt (into a hash code readble password type) the password
 userSchema.methods.isPasswordCorrect = async function (password) {
     
-    console.log("input password:", password);
-    console.log("stored hash:", this.password);
+    // //debugging password
+    // console.log("input password:", password);
+    // console.log("stored hash:", this.password);
     
     
     if (!password || !this.password) {
