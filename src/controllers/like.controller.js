@@ -3,68 +3,118 @@ import { Like } from "../models/likes.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { Video } from "../models/video.model.js";
 
 //this function is toggle a like while video
 const toggleVideoLike = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
+    const userId = req.user?._id;
+
+    //debug
+    // console.log("toggleVideoLike:", videoId);
+    // console.log("toggleVideoLike:", userId);
 
     if (!videoId || !isValidObjectId(videoId)) {
-        throw new ApiError(400, "No valid video Id found");
+        throw new ApiError(400, "Invalid video Id");
+    }
+
+    if (!userId) {
+        throw new ApiError(401, "Unauthorized: User is not logged in")
+    }
+
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(404, "Video is not found")
     }
 
     const isLiked = await Like.findOne({
         video: videoId,
-        likedBy: req.user?._id,
+        likedBy: userId,
     });
 
-    if (!isLiked) {
-        const removeLike = await Like.findByIdAndUpdate(isLiked._id);
+    //debug
+    // console.log("isLiked:", isLiked);
 
-        if (!removeLike) {
+    if (isLiked) {
+        const removedLike = await Like.findByIdAndDelete(isLiked?._id);
+
+        if (!removedLike) {
             throw new ApiError(500, "Error while removing like");
         }
+
+        return res.status(200)
+        .json(
+            new ApiResponse(200,
+                {},
+                "Like removed successfully"));
+
     } else {
         const liked = await Like.create({
             video: videoId,
-            likedBy: req.user?._id,
+            likedBy: userId,
+            tweet: null,
+            comment: null,
         });
 
         if (!liked) {
             throw new ApiError(500, "Error while liking video");
         }
-    }
-
-    return res.status(200)
+        
+        return res.status(200)
         .json(new ApiResponse(200,
             {},
-            "Video like status updated"));
+            "Video like successfully"));
+    }
 });
 
 
 //this function is toggle a like while commint
 const toggleCommentLike = asyncHandler(async (req, res) => {
     const { commentId } = req.params;
+    const userId = req.user?._id;
+
+    //debug
+    // console.log("commentId:", commentId);
+    // console.log("userId:", userId);
 
     if (!commentId || !isValidObjectId(commentId)) {
         throw new ApiError(400, "No valid comment Id found");
     }
 
+    if (!userId) {
+        throw new ApiError(401, "Unauthorized: User not logged in")
+    }
+
+
     const isLiked = await Like.findOne({
-        commint: commentId,
-        likedBy: req.user?._id,
+        comment: commentId,
+        likedBy: userId,
     });
 
-    if (!isLiked) {
-        const removeLike = await Like.findByIdAndUpdate(isLiked._id);
+    //debug
+    // console.log("isLiked:", isLiked);
 
-        if (!removeLike) {
+    if (isLiked) {
+        const removedLike = await Like.findByIdAndDelete(isLiked?._id);
+
+        if (!removedLike) {
             throw new ApiError(500, "Error while removing like");
         }
+
+        return res.status(200)
+        .json(new ApiResponse(200,
+            {},
+            "Comment like removed successfully"));
+        
     } else {
         const liked = await Like.create({
-            commint: commentId,
-            likedBy: req.user?._id,
+            comment: commentId,
+            likedBy: userId,
         });
+
+        //debug
+        // console.log("liked:", liked);
 
         if (!liked) {
             throw new ApiError(500, "Error while liking comment");
@@ -74,33 +124,45 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     return res.status(200)
         .json(new ApiResponse(200,
             {},
-            "Comment like status updated"));
+            "Comment liked update successfully"));
 });
 
 
 //this function is toggle a like while commint
 const toggleTweetLike = asyncHandler(async (req, res) => {
     const { tweetId } = req.params;
+    const { userId } = req.body;
 
     if (!tweetId || !isValidObjectId(tweetId)) {
         throw new ApiError(400, "No valid comment Id found");
     }
 
+    if (!userId) {
+        throw new ApiError(401, "Unauthorized: User not logged in")
+    }
+    
+
     const isLiked = await Like.findOne({
         tweet: tweetId,
-        likedBy: req.user?._id,
+        likedBy: userId,
     });
 
-    if (!isLiked) {
-        const removeLike = await Like.findByIdAndUpdate(isLiked._id);
+    if (isLiked) {
+        const removedLike = await Like.findByIdAndDelete(isLiked._id);
 
-        if (!removeLike) {
+        if (!removedLike) {
             throw new ApiError(500, "Error while removing like");
         }
+
+        return res.status(200)
+        .json(new ApiResponse(200,
+            {},
+            "Tweet liked status updated successfully"));
+
     } else {
         const liked = await Like.create({
             tweet: tweetId,
-            likedBy: req.user?._id,
+            likedBy: userId,
         });
 
         if (!liked) {
@@ -189,13 +251,13 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     ]);
 
     if (!likedVideo) {
-        throw new ApiError(500, "Error while retrived liked videos")
+        throw new ApiError(500, "Error while retrieved liked videos")
     }
 
     return res.status(200)
         .json(new ApiResponse(200,
             likedVideo,
-            "Liked video retrived successfully"));
+            "Liked video retrieved successfully"));
 });
 
 
