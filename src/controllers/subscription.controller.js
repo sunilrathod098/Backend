@@ -114,7 +114,7 @@ const getSubscriberChannel = asyncHandler(async (req, res) => {
         throw new ApiError(400, "No valid subscriber Id found")
     }
 
-    const subscribedChannels = await Subscribers.aggregate([
+    const subscribedChannels = await Subscription.aggregate([
         {
             $match: {
                 subscriber: new mongoose.Types.ObjectId(subscriberId),

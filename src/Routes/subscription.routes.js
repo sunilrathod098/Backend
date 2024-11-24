@@ -3,7 +3,7 @@ import {
     getSubscriberChannel,
     getUserChannelSubscribers,
     toggleSubscription
-} from "../controllers/comment.controller.js";
+} from "../controllers/subscription.controller.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 import { checkUser } from "../middleware/OAuth.middleware.js";
 

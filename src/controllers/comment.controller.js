@@ -4,7 +4,7 @@ import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 
-//this comeent conttroller feilds is perfoming on CURD opt'
+//this comment conttroller feilds is perfoming on CURD opt'
 
 //this function is a get comments by videos
 const getVideoComment = asyncHandler(async (req, res) => {
@@ -25,7 +25,7 @@ const getVideoComment = asyncHandler(async (req, res) => {
             }
         },
         {
-            $sort: { creatrdAt: -1 }
+            $sort: { createdAt: -1 }
         },
         {
             $skip: (page - 1) * limit
@@ -42,8 +42,8 @@ const getVideoComment = asyncHandler(async (req, res) => {
                 pipeline: [
                     {
                         $project: {
-                            username: 1,
                             _id: 1,
+                            username: 1,
                             avatar: 1,
                         }
                     }
@@ -72,20 +72,20 @@ const getVideoComment = asyncHandler(async (req, res) => {
                 likesCount: 1,
                 isLiked: 1,
                 content: 1,
-                creatrdAt: 1,
+                createdAt: 1,
                 owner: 1,
             }
         }
     ])
 
     if (!getComments) {
-        throw new ApiError(501, "Error while retriving comments")
+        throw new ApiError(501, "Error while retrieving comments")
     }
 
     return res.status(200)
         .json(new ApiResponse(200,
             getComments,
-            "Comments are retrived successfully"
+            "Comments are retrieved successfully"
         ))
 })
 
@@ -125,15 +125,25 @@ const updateComments = asyncHandler(async (req, res) => {
     const { content } = req.body
     const { commentId } = req.params;
 
-    if (!content.trim()) {
+    // //debug
+    // console.log(content)
+    // console.log(commentId)
+    
+    if (!content || !content.trim()) {
         throw new ApiError(400, "Comment not be empty")
     }
+
+    //debugging
+    // console.log("check content:", content)
 
     if (!commentId || !isValidObjectId(commentId)) {
         throw new ApiError(400, "Invalid comment Id")
     }
 
     const comment = await Comment.findById(commentId);
+
+    //debug
+    // console.log("Fetched comment:", comment)
 
     if (!comment) {
         throw new ApiError(500, "Comment not found")
@@ -182,7 +192,7 @@ const deleteComments = asyncHandler(async (req, res) => {
             "You do not have permission to delete this comment");
     }
 
-    const deletedComment = await Comment.findByIdAndUpdate(commentId);
+    const deletedComment = await Comment.findByIdAndDelete(commentId);
 
     if (!deletedComment) {
         throw new ApiError(400, "Error while updating comments")
@@ -191,7 +201,7 @@ const deleteComments = asyncHandler(async (req, res) => {
     return res.status(200)
         .json(new ApiResponse(200,
             deletedComment,
-            "Comment update successfully"));
+            "Comment deleted successfully"));
 });
 
 
