@@ -11,11 +11,8 @@ import { checkUser } from "../middleware/OAuth.middleware.js";
 
 const router = Router()
 
-router
-    .route("/c/:channelId")
-    .get(verifyJWT, getUserChannelSubscribers)
-    .post(verifyJWT, toggleSubscription);
-
-router.route("/u/:subscriberId").get(checkUser, getSubscriberChannel);
+router.route("/userchannel/:channelId").get(verifyJWT, getUserChannelSubscribers);
+router.route("/subscribetoggle/:channelId").post(verifyJWT, toggleSubscription);
+router.route("/subchannnel/:subscriberId").get(checkUser, getSubscriberChannel);
 
 export default router;

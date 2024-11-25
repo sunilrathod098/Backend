@@ -2,7 +2,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js"
 import { asyncHandler } from "../utils/asyncHandler.js";
 import mongoose, { isValidObjectId } from "mongoose";
-import { User } from "../models/User.js";
+import { User } from "../models/user.model.js";
 import { Video } from "../models/video.model.js"
 import { Playlist } from "../models/playlist.model.js"
 
@@ -38,6 +38,10 @@ const createPlaylist = asyncHandler( async (req, res) => {
 //this file is get user playlist in dashboard
 const getUserPlaylist = asyncHandler(async (req, res) => {
     const { userId } = req.params;
+
+    // // Debug
+    // console.log('Request Params:', req.params);
+    // console.log("user Id:", userId)
 
     if (!userId || !isValidObjectId(userId)) {
         throw new ApiError(404, "User not found")
@@ -82,6 +86,9 @@ const getUserPlaylist = asyncHandler(async (req, res) => {
 const getUserPlaylistById = asyncHandler(async(req, res) => {
     const { playlistId } = req.params;
 
+    //debug
+    console.log("user playlist Id: ", playlistId)
+    
     if (!playlistId || !isValidObjectId(playlistId)) {
         throw new ApiError(404, "Playlist ID is invalid")
     }
@@ -89,50 +96,81 @@ const getUserPlaylistById = asyncHandler(async(req, res) => {
     const fetchedPlaylist = await Playlist.aggregate([
         {
             $match: {
-                _id: new mongoose.Types.ObjectId(playlistId)
-            }
+                _id: new mongoose.Types.ObjectId(playlistId),
+            },
         },
         {
             $lookup: {
                 from: "videos",
-                localField: "videos",
+                localField: "video",
                 foreignField: "_id",
                 as: "playlistVideos",
-                pipeline: [
-                    {
-                        $lookup: {
-                            from: "users",
-                            localField: "owner",
-                            foreignField: "_id",
-                            as: "videoOwner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        username: 1
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                ]
-            }
+            },
+        },
+        {
+            $unwind: {
+                path: "$playlistVideos",
+                preserveNullAndEmptyArrays: true,
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "playlistVideos.owner",
+                foreignField: "_id",
+                as: "playlistVideos.videoOwner",
+            },
+        },
+        {
+            $unwind: {
+                path: "$playlistVideos.videoOwner",
+                preserveNullAndEmptyArrays: true,
+            },
+        },
+        {
+            $group: {
+                _id: "$_id",
+                name: { $first: "$name" },
+                description: { $first: "$description" },
+                owner: { $first: "$owner" },
+                createdAt: { $first: "$createdAt" },
+                updatedAt: { $first: "$updatedAt" },
+                playlistVideos: { $push: "$playlistVideos" },
+            },
         },
         {
             $addFields: {
-                playlistVideoCount: {
-                    $size: "$playlistVideos"
-                }
-            }
-        }
+                playlistVideoCount: { $size: "$playlistVideos" },
+            },
+        },
+        {
+            $project: {
+                _id: 1,
+                name: 1,
+                description: 1,
+                owner: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                playlistVideos: {
+                    _id: 1,
+                    title: 1,
+                    owner: 1,
+                    "videoOwner.username": 1,
+                playlistVideoCount: 1,
+            },
+        },
+    }
     ]);
+
+
     
-    if (!fetchedPlaylist) {
+    if (!fetchedPlaylist || !fetchedPlaylist.length === 0) {
         throw new ApiError(400, "Playlist not found")
     }
 
     return res.status(200)
     .json(new ApiResponse(200,
-        fetchedPlaylist,
+        fetchedPlaylist[0],
         "Playlist fetched successfully"));
 });
 
@@ -140,6 +178,10 @@ const getUserPlaylistById = asyncHandler(async(req, res) => {
 //add video to playlist
 const addVideoToPlaylist = asyncHandler( async (req, res) => {
     const { playlistId, videoId} = req.params;
+
+    //debug
+    // console.log("video Id: ", videoId)
+    // console.log("playlist Id :", playlistId)
 
     if (!playlistId || !videoId) {
         throw new ApiError(404, "Playlist Id and Video Id is missing")
@@ -155,11 +197,15 @@ const addVideoToPlaylist = asyncHandler( async (req, res) => {
         throw new ApiError(404, "Requested videos are not found")
     }
 
-    if (!fetchedPlaylist.videos.includes(fetchedVideo._id)) {
+    if (!fetchedPlaylist.video) {
+        fetchedPlaylist.video = []
+    }
+
+    if (!fetchedPlaylist.video.includes(fetchedVideo._id.toString())) {
         const videoAddedToPlaylist = await Playlist.findByIdAndUpdate(playlistId,
             {
                 $push: {
-                    videos: fetchedVideo,
+                    video: fetchedVideo._id,
                 },
             },
             {
@@ -170,18 +216,24 @@ const addVideoToPlaylist = asyncHandler( async (req, res) => {
         if (!videoAddedToPlaylist) {
             throw new ApiError(500, "Could not add videos in the playlist")
         }
-    }
 
     return res.status(200)
     .json(new ApiResponse(200,
-        {"videos ad to the playlist: ": fetchedVideo},
+        {"videos added to the playlist: ": fetchedVideo},
         "videos added to the playlist successfully"));
+    } else {
+        throw new ApiError(400, "Video already exists in the playlist")
+    }
 });
 
 
 //delete video from playlist
 const removeVideoFromPlaylist = asyncHandler( async (req, res) => {
     const { playlistId, videoId} = req.params;
+
+    //debug
+    // console.log("video Id: ", videoId)
+    // console.log("playlist Id :", playlistId)
 
     //check-validation
     if (!playlistId || !isValidObjectId(playlistId)) {
@@ -196,26 +248,32 @@ const removeVideoFromPlaylist = asyncHandler( async (req, res) => {
         throw new ApiError(404, "Playlist not found")
     }
 
-    if (fetchedPlaylist.videos.length === 0) {
-        throw new ApiError(400, "Playlist is empty")
+    // Debug: Log the fetched playlist object to check its structure
+    // console.log("Fetched Playlist:", fetchedPlaylist);
+
+    if (!Array.isArray(fetchedPlaylist.video)) {
+        throw new ApiError(400, "Playlist videos field is not an array")
+    }
+
+    if (fetchedPlaylist.video.length === 0) {
+        throw new ApiError(400, "Playlist has no videos to remove was a empty")
     }
 
     // this is use for debugging video is feteched or not from the playlist
-    console.log(fetchedPlaylist.videos)
+    // console.log(fetchedPlaylist.video)
 
     //video uis present in playlist or not check
-    let isVideoPresent = false;
-    isVideoPresent = fetchedPlaylist.videos.some((video) => video.equals(videoId));
+    let isVideoPresent = fetchedPlaylist.video.some((video) => video.equals(videoId));
 
     // this is use for debugging video is present or not
-    console.log(isVideoPresent)
+    // console.log("Is video is present: ", isVideoPresent)
 
     if (!isVideoPresent) {
         throw new ApiError(404, "Video dose not exist in the playlist")
     }
 
     //here is the remove/delete video from the playlist
-    const videoRemovedFromPlaylist = await Playlist.findByIdAndUpdate(playlistId,
+    const videoRemovedFromPlaylist = await Playlist.findByIdAndDelete(playlistId,
         {
             $pull: {
                 videos: new mongoose.Types.ObjectId(videoId)
@@ -267,6 +325,10 @@ const updatePlaylist = asyncHandler(async(req, res) => {
     const { playlistId } = req.params;
     const { name, description } = req.body;
 
+    // //debug
+    // console.log("playlist Id:", req.params)
+    // console.log("User details: ", req.body)
+
     if (!playlistId || !isValidObjectId(playlistId)) {
         throw new ApiError(400, "Invalid playlist Id")
     }
@@ -274,7 +336,7 @@ const updatePlaylist = asyncHandler(async(req, res) => {
         throw new ApiError(404, "Invalid name and description")
     }
 
-    const updatedPlaylist = await Playlist.findByIdAndUpdate(playlistId, 
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(playlistId,
         {
             $set: {
                 name,
@@ -290,11 +352,15 @@ const updatePlaylist = asyncHandler(async(req, res) => {
         throw new ApiError(500, "Could not update the playlist")
     }
 
+    //debugging
+    // console.log("updated List: ", updatedPlaylist)
+
     return res.status(200)
     .json(new ApiResponse(200,
         updatedPlaylist,
         "Playlist updated successfully"));
 });
+
 
 //get videos from the playlist
 const getVideoPlaylist = asyncHandler( async (req, res) => {
@@ -308,11 +374,12 @@ const getVideoPlaylist = asyncHandler( async (req, res) => {
         }
 
         const playlist = await Playlist.findById(playlistId);
+        
         if (!playlist) {
             throw new ApiError(404, "Playlist not found")
         }
 
-    const videoExists = await Playlist.videos.some((video) => video.equals(videoId));
+    const videoExists = playlist.video.some((video) => video.equals(videoId));
     if (!videoExists) {
         throw new ApiError(404, "Video is found in playlist")
     }

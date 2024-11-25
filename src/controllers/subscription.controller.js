@@ -10,6 +10,12 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 const toggleSubscription = asyncHandler(async (req, res) => {
     const { channelId } = req.params;
 
+    //debug
+    if(!req.params){
+    console.log("user channel from params:", !req.params)
+    }
+    console.log("channel id: ", channelId)
+
     if (!channelId || !isValidObjectId(channelId)) {
         throw new ApiError(400, "Invalid Channel Id");
     }
@@ -18,19 +24,22 @@ const toggleSubscription = asyncHandler(async (req, res) => {
         throw new ApiError(403, "Cannot subscribe your own channel");
     }
 
-    const isSubscribed = await Subscruption.findOne({
+    const isSubscribed = await Subscription.findOne({
         subscriber: req.user?._id,
         channel: channelId,
     });
 
+    //debug
+    console.log("isSubscribed status: ", isSubscribed)
+
     if (isSubscribed) {
-        const unsubscribe = await Subscruption.findByIdAndDelete(isSubscribed)
+        const unsubscribe = await Subscription.findByIdAndDelete(isSubscribed)
 
         if (!unsubscribe) {
             throw new ApiError(500, "Error while Unsubscrbing")
         }
     } else {
-        const subscribe = await Subscruption.create({
+        const subscribe = await Subscription.create({
             subscriber: req.user?._id,
             channel: channelId,
         });
@@ -51,6 +60,9 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     const { channelId } = req.params;
 
+    //debug
+    console.log(channelId)
+    
     if (!channelId || !isValidObjectId(channelId)) {
         throw new ApiError(400, "Invalid Channel Id");
     }
@@ -95,14 +107,14 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
         }
     ]);
 
-    if (!subscribers) {
+    if (!subscriber) {
         throw new ApiError(400, "Subscribers not found")
     }
 
     return res.status(200)
         .json(new ApiResponse(200,
-            subscribers,
-            "Subscribers retrived successfully"));
+            subscriber,
+            "Subscribers retrieved successfully"));
 })
 
 
