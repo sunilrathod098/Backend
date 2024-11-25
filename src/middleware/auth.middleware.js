@@ -10,8 +10,8 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer", "").trim();
 
         //debugging
-        // console.log("Token from Cookie:", req.cookies?.accessToken);
-        // console.log("Token from Header:", req.header("Authorization"));
+        console.log("Token from Cookie:", req.cookies?.accessToken);
+        console.log("Token from Header:", req.header("Authorization"));
 
 
         //check if the token is missing
@@ -30,6 +30,7 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
             "-password -refreshToken"
         )
 
+        console.log(user)
 
         //check if the user is exist or not
         if (!user) {

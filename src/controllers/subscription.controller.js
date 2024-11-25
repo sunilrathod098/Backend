@@ -11,16 +11,16 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     const { channelId } = req.params;
 
     //debug
-    if(!req.params){
-    console.log("user channel from params:", !req.params)
-    }
-    console.log("channel id: ", channelId)
+    // if(!req.params){
+    // console.log("user channel from params:", !req.params)
+    // }
+    // console.log("channel id: ", channelId)
 
     if (!channelId || !isValidObjectId(channelId)) {
         throw new ApiError(400, "Invalid Channel Id");
     }
 
-    if (!channelId.toString() !== req.user?._id.toString()) {
+    if (channelId.toString() !== req.user?._id.toString()) {
         throw new ApiError(403, "Cannot subscribe your own channel");
     }
 
@@ -30,7 +30,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     });
 
     //debug
-    console.log("isSubscribed status: ", isSubscribed)
+    // console.log("isSubscribed status: ", isSubscribed)
 
     if (isSubscribed) {
         const unsubscribe = await Subscription.findByIdAndDelete(isSubscribed)
@@ -58,16 +58,26 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
 //user channel subscribers function
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
+    // console.log("Inside getUserChannelSubscribers Controller");
+
+    // console.log(req.params)
+
     const { channelId } = req.params;
 
     //debug
-    console.log(channelId)
+    // console.log(req.params)
+    // console.log("Channel Id:", channelId)
     
     if (!channelId || !isValidObjectId(channelId)) {
         throw new ApiError(400, "Invalid Channel Id");
     }
 
-    const subscriber = await Subscription.aggregate([
+    const channelExists = await Subscription.findOne({ channel: channelId });
+    if (!channelExists) {
+        throw new ApiError(404, "channel not found")
+    }
+
+    const subscribers = await Subscription.aggregate([
         {
             $match: {
                 channel: new mongoose.Types.ObjectId(channelId),
@@ -78,18 +88,19 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
                 from: "users",
                 localField: "subscriber",
                 foreignField: "_id",
-                as: "subscriber",
+                as: "subscriberDetails",
             }
         },
         {
-            $addFields: {
-                subscriber: "$subscribers",
+            $unwind: {
+                path: "$subscriberDetails",
+                preserveNullAndEmptyArrays: true,
             }
         },
         {
             $group: {
                 _id: null,
-                subscribers: { $push: "$subscribers" },
+                subscribers: { $push: "$subscriberDetails" },
                 totalSubscribers: { $sum: 1 },
             }
         },
@@ -107,13 +118,13 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
         }
     ]);
 
-    if (!subscriber) {
+    if (!subscribers || subscribers.length === 0) {
         throw new ApiError(400, "Subscribers not found")
     }
 
     return res.status(200)
         .json(new ApiResponse(200,
-            subscriber,
+            subscribers[0],
             "Subscribers retrieved successfully"));
 })
 
@@ -122,7 +133,11 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 const getSubscriberChannel = asyncHandler(async (req, res) => {
     const { subscriberId } = req.params;
 
-    if (!subscriberId || !isValidObjectId(channelId)) {
+    //debug
+    // console.log(req.params)
+    // console.log(subscriberId)
+
+    if (!subscriberId || !isValidObjectId(subscriberId)) {
         throw new ApiError(400, "No valid subscriber Id found")
     }
 
@@ -134,7 +149,7 @@ const getSubscriberChannel = asyncHandler(async (req, res) => {
         },
         {
             $lookup: {
-                user: "users",
+                from: "users",
                 localField: "channel",
                 foreignField: "_id",
                 as: "channelDetails",
@@ -193,7 +208,7 @@ const getSubscriberChannel = asyncHandler(async (req, res) => {
         }
     ]);
 
-    if (!subscribedChannels) {
+    if (!subscribedChannels || subscribedChannels === 0) {
         throw new ApiError(404, "Channels are not found")
     }
 
