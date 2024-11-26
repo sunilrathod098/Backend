@@ -34,68 +34,68 @@ The core functionality resides within the src folder, which is divided into subd
 #### 1. Routes
 - Defines the API endpoints for each feature of the application. Routes act as the entry point to the backend logic.
 
-- *Comment Routes:* Manage comment-related actions.
-- *Dashboard Routes:* Provide aggregated data and analytics for the platform.
-- *Healthcheck Routes:* Monitor the health of the application.
-- *Likes Routes:* Handle user likes for videos or comments.
-- *Playlist Routes:* Manage user-created playlists.
-Subscription Routes: Handle user subscriptions to channels.
-- *Tweet Routes:* Manage user tweets or status updates.
-- *User Routes:* Manage user accounts, profiles, and authentication.
-- *Video Routes:* Handle video uploads, retrieval, and metadata.
+- `Comment Routes:` Manage comment-related actions.
+- `Dashboard Routes:` Provide aggregated data and analytics for the platform.
+- `Healthcheck Routes:` Monitor the health of the application.
+- `Likes Routes:` Handle user likes for videos or comments.
+- `Playlist Routes:` Manage user-created playlists.
+- `Subscription Routes:` Handle user subscriptions to channels.
+- `Tweet Routes:` Manage user tweets or status updates.
+- `User Routes:` Manage user accounts, profiles, and authentication.
+- `Video Routes:` Handle video uploads, retrieval, and metadata.
 
 #### 2. Controllers
 - Contain the logic for each route. Controllers interact with models and perform actions like CRUD operations and data transformations.
 
-- *Comment Controller:* Handles creation, updating, and deletion of comments.
-- *Dashboard Controller:* Provides data insights and metrics for user dashboards.
-- *Healthcheck Controller:* Ensures the backend is operational.
-- *Like Controller:* Manages likes and unlikes for videos and comments.
-- *Playlist Controller:* Handles playlist creation, modification, and deletion.
-- *Subscription Controller:* Manages user subscriptions and notifications.
-- *Tweet Controller:* Implements logic for user tweets or announcements.
-- *User Controller*: Manages user registration, login, profiles, and authentication.
-- *Video Controller:* Handles video uploads, metadata, and playback-related actions.
+- `Comment Controller:` Handles creation, updating, and deletion of comments.
+- `Dashboard Controller:` Provides data insights and metrics for user dashboards.
+- `Healthcheck Controller:` Ensures the backend is operational.
+- `Like Controller:` Manages likes and unlikes for videos and comments.
+- `Playlist Controller:` Handles playlist creation, modification, and deletion.
+- `Subscription Controller:` Manages user subscriptions and notifications.
+- `Tweet Controller:` Implements logic for user tweets or announcements.
+- `User Controller:` Manages user registration, login, profiles, and authentication.
+- `Video Controller:` Handles video uploads, metadata, and playback-related actions.
 
 #### 3. Models
 Defines the database schemas using an Object Data Modeling (ODM) library like Mongoose for MongoDB. These schemas dictate the structure of stored data.
 
-- *Comments Model:* Schema for comments on videos or playlists.
-- *Likes Model:* Tracks likes and unlikes for videos or comments.
--* Playlist Model:* Schema for user-created playlists.
-- *Subscription Model:* Tracks user subscriptions to channels.
-- *Tweets Model:* Schema for user-generated tweets or status updates.
-- *User Model:* Schema for user accounts and profile information.
-- *Video Model:* Schema for video files, metadata, and related data.
+- `Comments Model:` Schema for comments on videos or playlists.
+- `Likes Model:` Tracks likes and unlikes for videos or comments.
+- `Playlist Model:` Schema for user-created playlists.
+- `Subscription Model:` Tracks user subscriptions to channels.
+- `Tweets Model:` Schema for user-generated tweets or status updates.
+- `User Model:` Schema for user accounts and profile information.
+- `Video Model:` Schema for video files, metadata, and related data.
 
 #### 4. Middleware
 - Contains reusable functions that execute during the request-response cycle.
 
-- *OAuth Middleware:* Handles OAuth authentication for secure login.
-- *Auth Middleware:* Verifies user authentication using JWTs.
-- *Multer Middleware:* Manages file uploads for videos, avatars, and other media.
+- `OAuth Middleware:` Handles OAuth authentication for secure login.
+- `Auth Middleware:` Verifies user authentication using JWTs.
+- `Multer Middleware:` Manages file uploads for videos, avatars, and other media.
 
 #### 5. Utils
 - Reusable utilities for various backend functionalities.
 
-- *ApiError:* Standardizes error handling across the application.
-- *ApiResponse:* Constructs consistent API responses.
-- *UnlinkPath:* Utility to delete temporary files after processing.
-- *AsyncHandler:* Wraps asynchronous routes to handle errors efficiently.
-- *FileUpload:* Provides utilities for managing and storing uploaded files.
+- `ApiError:` Standardizes error handling across the application.
+- `ApiResponse:` Constructs consistent API responses.
+- `UnlinkPath:` Utility to delete temporary files after processing.
+- `AsyncHandler:` Wraps asynchronous routes to handle errors efficiently.
+- `FileUpload:` Provides utilities for managing and storing uploaded files.
 
 #### 6. Config
 - Houses configuration files for database connections and other environment-dependent setups.
 
-- *DB.js:* Configures and initializes the database connection using MongoDB.
+- `DB.js:` Configures and initializes the database connection using MongoDB.
 
 #### 7. Constants.js
 - Defines constant values used throughout the application, such as roles, statuses, or fixed messages.
 
-- *8. App.js*
+- `8. App.js`
 - The main Express.js application setup file. Configures middlewares, initializes routes, and starts the server.
 
-- *9. Index.js*
+- `9. Index.js`
 - Entry point for the backend server. Loads environment variables, initializes the application, and starts listening for incoming requests.
 
 ## Key Features
