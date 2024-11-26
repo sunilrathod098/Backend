@@ -5,6 +5,8 @@ This project is a complex backend project that is built with nodejs, expressjs, 
 
 Project uses all standard practices like JWT, bcrypt, access tokens, refresh Tokens and many more. I have spent a lot of time in building this project.
 
+### Endpoints in postman:- https://documenter.getpostman.com/view/37991803/2sAYBVgr5M
+### Repo:- https://github.com/sunilrathod098/YouTube-Clone-Project
 
 
 # Backend Documentation for PlaylistTube (YouTube-Clone Project)
@@ -153,10 +155,6 @@ Error Handling:
 - Install dependencies: `npm install`
 - Start the development server: `npm run dev`
 - Build and run for production: `npm run build` && `npm start`
-
-
-### Endpoints in postman https://documenter.getpostman.com/view/37991803/2sAYBVgr5M
-### Repo:-https: https://github.com/sunilrathod098/YouTube-Clone-Project
 
 ## Conclusion
 - This backend structure is robust, modular, and scalable, designed to support a PlaylistTube platform's core functionalities efficiently. The use of industry-standard practices like JWT, OAuth, and modular architecture ensures the backend is secure, maintainable, and ready for scaling.
